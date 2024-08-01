@@ -34,8 +34,7 @@ namespace SystemInfoCsvWriter
             // Ustawienie ikony
             try
             {
-                this.Icon = new Icon(
-                    "app_icon.ico");
+                this.Icon = Properties.Resources.app_icon;
             }
             catch (Exception ex)
             {
