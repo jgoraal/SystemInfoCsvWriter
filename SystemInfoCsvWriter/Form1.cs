@@ -251,15 +251,15 @@ namespace SystemInfoCsvWriter
 
                 if (new FileInfo(path).Length == 0)
                 {
-                    writer.WriteLine("Group,Title,Username,Password,URL,Notes,Model,S\\N,OS,CPU,RAM,HDD/SSD");
+                    writer.WriteLine("Group;Title;Username;Password;URL;Notes;Model;S\\N;OS;CPU;RAM;HDD/SSD");
                 }
 
                 // Main entry: Title: Hostname with advanced fields
                 writer.WriteLine($"\"{group}/{subgroup}\";" + // Group/Subgroup
                                  $"\"{SystemInfo.Hostname}\";" + // Title: Hostname
-                                 $"\"{SystemInfo.Username}\";" + // Username: empty
+                                 $"\"{SystemInfo.Username}\";" + // Username: Username
                                  $"\"\";" + // Password: empty
-                                 $"\"\";" + // URL: empty
+                                 $"\"{SystemInfo.Ip}\";" + // URL: IP address
                                  $"\"\";" + // Notes: empty
                                  $"\"{SystemInfo.Model}\";" + // Model: SystemInfo.Model
                                  $"\"{SystemInfo.Serial}\";" + // S\N: SystemInfo.Serial
@@ -267,22 +267,6 @@ namespace SystemInfoCsvWriter
                                  $"\"{SystemInfo.Cpu}\";" + // CPU: SystemInfo.Cpu
                                  $"\"{SystemInfo.Ram}\";" + // RAM: SystemInfo.Ram
                                  $"\"{SystemInfo.Memory}\";"); // HDD/SSD: SystemInfo.Memory
-
-                // Subgroup entry: Username: full username
-                writer.WriteLine($"\"{group}/{subgroup}\";" + // Group/Subgroup/Username
-                                 $"\"Username\";" + // Title: Username
-                                 $"\"{SystemInfo.Username}\";" + // Username: full username
-                                 $"\"\";" + // Password: empty
-                                 $"\"\";" + // URL: empty
-                                 $"\"\""); // Notes: empty
-
-                // Subgroup entry: URL: IP address
-                writer.WriteLine($"\"{group}/{subgroup}\";" + // Group/Subgroup/URL
-                                 $"\"URL\";" + // Title: IP Address
-                                 $"\"\";" + // Username: empty
-                                 $"\"\";" + // Password: empty
-                                 $"\"{SystemInfo.Ip}\";" + // URL: IP address
-                                 $"\"\""); // Notes: empty
             }
         }
     }
