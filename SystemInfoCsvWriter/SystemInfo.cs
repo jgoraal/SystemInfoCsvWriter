@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Management;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace SystemInfoCsvWriter
 {
@@ -16,7 +20,7 @@ namespace SystemInfoCsvWriter
         internal string Cpu { get; set; }
         internal string Ram { get; set; }
         internal string Memory { get; set; }
-        internal string Ip { get; set; }
+        internal Dictionary<string,string> Ip { get; set; }
 
         private SystemInfo() { }
 
@@ -31,7 +35,7 @@ namespace SystemInfoCsvWriter
             systemInfo.Cpu = await systemInfo.GetCpuAsync();
             systemInfo.Ram = await systemInfo.GetRamAsync();
             systemInfo.Memory = await systemInfo.GetMemoryAsync();
-            systemInfo.Ip = await systemInfo.GetPublicIpAsync();
+            systemInfo.Ip = systemInfo.GetEthernetIpsAsync();
             return systemInfo;
         }
 
@@ -191,19 +195,36 @@ namespace SystemInfoCsvWriter
             });
         }
 
-        private async Task<string> GetPublicIpAsync()
+        private Dictionary<string, string> GetEthernetIpsAsync()
         {
             try
             {
-                using (var httpClient = new HttpClient())
+                var interfaces = new Dictionary<string,string>();
+                foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    string publicIp = await httpClient.GetStringAsync("https://api.ipify.org");
-                    return publicIp.Trim();
+                    // Filtrujemy tylko interfejsy typu Ethernet
+                    if (ni.NetworkInterfaceType == NetworkInterfaceType.Ethernet && ni.OperationalStatus == OperationalStatus.Up)
+                    {
+                        var ipProps = ni.GetIPProperties();
+                        foreach (var ip in ipProps.UnicastAddresses)
+                        {
+                            // Filtrujemy tylko adresy IPv4
+                            if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                            {
+                                interfaces.Add(ni.Name.Trim(), ip.Address.ToString().Trim());
+                            }
+                        }
+                    }
                 }
+
+                if (interfaces.Count == 0)
+                    interfaces.Add("Nieznany", "Nieznany");
+
+                return interfaces.OrderBy(k => k.Key).ToDictionary(k => k.Key,v => v.Value);
             }
             catch (Exception ex)
             {
-                throw new Exception("Błąd podczas pobierania publicznego adresu IP", ex);
+                throw new Exception("Błąd podczas pobierania adresów IP dla Ethernetu", ex);
             }
         }
 
@@ -212,6 +233,7 @@ namespace SystemInfoCsvWriter
             var builder = new StringBuilder();
             builder.AppendLine("Informacje o systemie:");
             builder.AppendLine($"Hostname - {Hostname}");
+            builder.AppendLine($"Username - {Username}");
             builder.AppendLine($"Model - {Model}");
             builder.AppendLine($"Serial - {Serial}");
             builder.AppendLine($"OS - {Os}");

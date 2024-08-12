@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -14,6 +16,7 @@ namespace SystemInfoCsvWriter
         private TextBox textBoxGroup;
         private RadioButton radioButtonHostname;
         private RadioButton radioButtonHostnameUsername;
+        private ListView listViewIpAddresses; // ListView do wyboru IP
 
         public Form1()
         {
@@ -122,7 +125,7 @@ namespace SystemInfoCsvWriter
             // RadioButton dla hostname - full username
             radioButtonHostnameUsername = new RadioButton
             {
-                Text = "Hostname - Full",
+                Text = "Hostname - Full username",
                 Location = new Point(radioButtonHostname.Width + spacing, 0),
                 AutoSize = true
             };
@@ -144,7 +147,7 @@ namespace SystemInfoCsvWriter
             {
                 Location = new Point(spacing, labelEntries.Bottom + spacing),
                 Width = textBoxWidth,
-                Height = 200,
+                Height = 190,
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true
@@ -153,11 +156,25 @@ namespace SystemInfoCsvWriter
             listViewEntries.Columns.Add("Wartość", 140);
             this.Controls.Add(listViewEntries);
 
+            // ListView dla wyboru adresu IP
+            listViewIpAddresses = new ListView
+            {
+                Location = new Point(spacing, listViewEntries.Bottom + spacing),
+                Width = textBoxWidth,
+                Height = 70,
+                View = View.Details,
+                FullRowSelect = true,
+                GridLines = true
+            };
+            listViewIpAddresses.Columns.Add("Interfejs", 120);
+            listViewIpAddresses.Columns.Add("Adres IP", 140);
+            this.Controls.Add(listViewIpAddresses);
+
             // Button zapisz
             Button buttonSave = new Button
             {
                 Text = "Zapisz",
-                Location = new Point(spacing, listViewEntries.Bottom + spacing),
+                Location = new Point(spacing, listViewIpAddresses.Bottom + spacing),
                 AutoSize = true
             };
             buttonSave.Click += ButtonSave_Click;
@@ -184,6 +201,7 @@ namespace SystemInfoCsvWriter
         {
             SystemInfo = await SystemInfo.CreateAsync();
             DisplaySystemInfo();
+            PopulateIpListView(); // Dodajemy wypełnienie ListView
             AutoResizeColumns();
         }
 
@@ -197,12 +215,31 @@ namespace SystemInfoCsvWriter
             listViewEntries.Items.Add(new ListViewItem(new[] { "CPU", SystemInfo.Cpu }));
             listViewEntries.Items.Add(new ListViewItem(new[] { "RAM", SystemInfo.Ram }));
             listViewEntries.Items.Add(new ListViewItem(new[] { "HDD/SSD", SystemInfo.Memory }));
-            listViewEntries.Items.Add(new ListViewItem(new[] { "IP", SystemInfo.Ip }));
+        }
+
+        private void PopulateIpListView()
+        {
+            foreach (var entry in SystemInfo.Ip)
+            {
+                var listItem = new ListViewItem(entry.Key);
+                listItem.SubItems.Add(entry.Value);
+                listViewIpAddresses.Items.Add(listItem);
+            }   
+
+            if (listViewIpAddresses.Items.Count > 0)
+            {
+                listViewIpAddresses.Items[0].Selected = true; // Ustawiamy pierwszy adres jako domyślny
+            }
         }
 
         private void AutoResizeColumns()
         {
             foreach (ColumnHeader column in listViewEntries.Columns)
+            {
+                column.Width = -2;
+            }
+
+            foreach (ColumnHeader column in listViewIpAddresses.Columns)
             {
                 column.Width = -2;
             }
@@ -213,6 +250,12 @@ namespace SystemInfoCsvWriter
             if (string.IsNullOrEmpty(textBoxGroup.Text))
             {
                 MessageBox.Show("Wpisz nazwę grupy!");
+                return;
+            }
+
+            if (listViewIpAddresses.SelectedItems.Count == 0)
+            {
+                MessageBox.Show("Wybierz adres IP!");
                 return;
             }
 
@@ -234,10 +277,8 @@ namespace SystemInfoCsvWriter
             else
             {
                 WriteDataToFile(textBoxCsvPath.Text, true);
-
                 MessageBox.Show("Informacje zapisane do pliku CSV!");
             }
-
         }
 
         private void WriteDataToFile(string path, bool append = false)
@@ -249,6 +290,8 @@ namespace SystemInfoCsvWriter
                     ? SystemInfo.Hostname
                     : $"{SystemInfo.Hostname}-{SystemInfo.Username}";
 
+                string selectedIp = listViewIpAddresses.SelectedItems[0].SubItems[1].Text;
+
                 if (new FileInfo(path).Length == 0)
                 {
                     writer.WriteLine("Group;Title;Username;Password;URL;Notes;Model;S\\N;OS;CPU;RAM;HDD/SSD");
@@ -259,7 +302,7 @@ namespace SystemInfoCsvWriter
                                  $"\"{SystemInfo.Hostname}\";" + // Title: Hostname
                                  $"\"{SystemInfo.Username}\";" + // Username: Username
                                  $"\"\";" + // Password: empty
-                                 $"\"{SystemInfo.Ip}\";" + // URL: IP address
+                                 $"\"{selectedIp}\";" + // URL: selected IP address
                                  $"\"\";" + // Notes: empty
                                  $"\"{SystemInfo.Model}\";" + // Model: SystemInfo.Model
                                  $"\"{SystemInfo.Serial}\";" + // S\N: SystemInfo.Serial
